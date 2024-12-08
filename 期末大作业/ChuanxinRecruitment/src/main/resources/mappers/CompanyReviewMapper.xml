@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gzu.chuanxinrecruitment.mapper.CompanyReviewMapper">
+    
+    <resultMap id="BaseResultMap" type="com.gzu.chuanxinrecruitment.entity.CompanyReview">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="company_name" property="companyName"/>
+        <result column="rating" property="rating"/>
+        <result column="comments" property="comments"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="getRecentReviews" resultType="com.gzu.chuanxinrecruitment.entity.CompanyReview">
+        SELECT * FROM company_review 
+        WHERE company_name = #{companyName}
+        ORDER BY created_at DESC 
+        LIMIT #{limit}
+    </select>
+    
+    <select id="getAverageRating" resultType="java.lang.Double">
+        SELECT AVG(rating) FROM company_review
+        WHERE company_name = #{companyName}
+    </select>
+
+    <select id="getCompanyRatingSummary" resultType="java.util.Map">
+        SELECT 
+            company_name as name,
+            COUNT(*) as reviewCount,
+            ROUND(AVG(rating), 1) as avgRating
+        FROM company_review
+        GROUP BY company_name
+    </select>
+
+    <select id="getRatingDistribution" resultType="java.util.Map">
+        SELECT 
+            CONCAT(rating, '分') as name,
+            COUNT(*) as value 
+        FROM company_review
+        WHERE company_name = #{companyName}
+        GROUP BY rating
+        ORDER BY rating DESC
+    </select>
+</mapper>

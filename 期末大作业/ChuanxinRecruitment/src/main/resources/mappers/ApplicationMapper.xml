@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gzu.chuanxinrecruitment.mapper.ApplicationMapper">
+    <resultMap id="BaseResultMap" type="com.gzu.chuanxinrecruitment.entity.Application">
+        <id column="id" property="id"/>
+        <result column="resume_id" property="resumeId"/>
+        <result column="job_id" property="jobId"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <select id="getApplicationStatusStats" resultType="java.util.Map">
+        SELECT 
+            CASE 
+                WHEN status = 'pending' THEN '待处理'
+                WHEN status = 'reviewing' THEN '审核中'
+                WHEN status = 'accepted' THEN '已通过'
+                WHEN status = 'rejected' THEN '已拒绝'
+                ELSE status 
+            END as name,
+            COUNT(*) as value
+        FROM application
+        GROUP BY status
+    </select>
+</mapper>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>登录</title>
+    <style>
+        /* 页面样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-box {
+            width: 100%;
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        p {
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+        }
+
+        .error-message {
+            color: #ff0000;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* 验证码样式 */
+        .captcha-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .captcha-input {
+            width: 120px !important;
+            flex: none;
+        }
+
+        .captcha-canvas {
+            width: 120px;
+            height: 40px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #f0f0f0;
+        }
+
+        .refresh-captcha {
+            width: auto !important;
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .refresh-captcha:hover {
+            background: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="login-box">
+        <h2>登录</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名：</label>
+                <input id="username" name="username" placeholder="请输入用户名" required type="text">
+            </div>
+            <div class="form-group">
+                <label for="password">密码：</label>
+                <input id="password" name="password" placeholder="请输入密码" required type="password">
+            </div>
+            <div class="form-group">
+                <label for="role">角色：</label>
+                <select id="role" name="role" required onchange="handleRoleChange()">
+                    <option value="">请选择角色</option>
+                    <option value="普通用户">普通用户</option>
+                    <option value="管理员">管理员</option>
+                </select>
+            </div>
+            <div class="form-group" id="identityGroup" style="display: none;">
+                <label for="identity">身份：</label>
+                <select id="identity" name="identity" required>
+                    <option value="" disabled >请选择身份</option>
+                    <option value="求职者">求职者</option>
+                    <option value="企业HR">企业HR</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="captcha">验证码：</label>
+                <div class="captcha-container">
+                    <input type="text" id="captcha" name="captcha" required placeholder="请输入验证码" maxlength="4" class="captcha-input">
+                    <canvas id="captchaCanvas" width="120" height="40" class="captcha-canvas"></canvas>
+                    <button type="button" class="refresh-captcha" onclick="generateCaptcha()">刷新</button>
+                </div>
+            </div>
+            <button type="submit">登录</button>
+        </form>
+        <p>还没有账号？<a href="register.html">点击注册</a></p>
+        <p class="error-message" id="error-message"></p>
+    </div>
+</div>
+
+<script>
+    let captchaText = '';
+
+    // 生成随机验证码
+    function generateCaptcha() {
+        const canvas = document.getElementById('captchaCanvas');
+        const ctx = canvas.getContext('2d');
+        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        
+        // 清空画布
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 生成4位随机验证码
+        captchaText = '';
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 24px Arial';
+        
+        // 计算字符间距
+        const spacing = canvas.width / 6; // 将画布宽度分成6份，留出两边的边距
+        const startX = spacing; // 起始位置为一份宽度
+        
+        for(let i = 0; i < 4; i++) {
+            const char = chars[Math.floor(Math.random() * chars.length)];
+            captchaText += char;
+            
+            // 保存当前画布状态
+            ctx.save();
+            
+            // 移动到字符位置并添加随机旋转
+            const x = startX + i * spacing;
+            const y = canvas.height / 2 + 8;
+            ctx.translate(x, y);
+            ctx.rotate((Math.random() - 0.5) * 0.3); // 减小旋转角度
+            
+            // 绘制字符
+            ctx.fillText(char, 0, 0);
+            
+            // 恢复画布状态
+            ctx.restore();
+        }
+        
+        // 添加干扰线
+        for(let i = 0; i < 3; i++) {
+            ctx.strokeStyle = `rgba(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255},0.3)`;
+            ctx.beginPath();
+            ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+            ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+            ctx.stroke();
+        }
+        
+        // 添加干扰点
+        for(let i = 0; i < 30; i++) {
+            ctx.fillStyle = `rgba(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255},0.3)`;
+            ctx.beginPath();
+            ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+    }
+
+    // 页面加载时生成验证码
+    window.onload = function() {
+        generateCaptcha();
+        handleRoleChange();
+    };
+
+    // 点击验证码图片时刷新
+    document.getElementById('captchaCanvas').addEventListener('click', generateCaptcha);
+
+    function handleRoleChange() {
+        const roleSelect = document.getElementById('role');
+        const identityGroup = document.getElementById('identityGroup');
+        
+        if (roleSelect.value === '普通用户') {
+            identityGroup.style.display = 'block';
+        } else {
+            identityGroup.style.display = 'none';
+        }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const role = document.getElementById('role').value;
+        const identity = document.getElementById('identity').value;
+        const captchaInput = document.getElementById('captcha').value.trim();
+        const errorMessage = document.getElementById('error-message');
+
+        errorMessage.textContent = '';
+
+        // 验证码验证
+        if (!captchaInput) {
+            errorMessage.textContent = '请输入验证码！';
+            return;
+        }
+
+        if (captchaInput.toLowerCase() !== captchaText.toLowerCase()) {
+            errorMessage.textContent = '验证码错误！';
+            generateCaptcha(); // 刷新验证码
+            document.getElementById('captcha').value = ''; // 清空验证码输入
+            return;
+        }
+
+        // 前端验证
+        if (!username || !password || !role) {
+            errorMessage.textContent = '用户名、密码或角色不能为空！';
+            return;
+        }
+
+        // 如果是普通用户，验证身份选择
+        if (role === '普通用户' && !identity) {
+            errorMessage.textContent = '请选择您的身份！';
+            return;
+        }
+
+        // 构建请求体
+        const requestBody = new URLSearchParams();
+        requestBody.append('username', username);
+        requestBody.append('password', password);
+        requestBody.append('role', role);
+        if (role === '普通用户') {
+            requestBody.append('identity', identity);
+        }
+
+        fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: requestBody.toString(),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200 && data.success) {
+                    const token = data.result || '';
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('userRole', role);
+                    if (role === '普通用户') {
+                        localStorage.setItem('userIdentity', identity);
+                    }
+
+                    // 获取用户信息并存储用户ID
+                    fetch(`/api/user/username/${username}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(userData => {
+                        if (userData.code === 200) {
+                            localStorage.setItem('userId', userData.result.id);
+                            localStorage.setItem('username', userData.result.username);
+                        }
+                        
+                        // 获取用户信息后再进行页面跳转
+                        if (role === '管理员') {
+                            window.location.href = 'admin/userManagement.html';
+                        } else if (role === '普通用户') {
+                            if (identity === '求职者') {
+                                window.location.href = 'jobSeeker/jobList.html';
+                            } else if (identity === '企业HR') {
+                                window.location.href = 'hr/hrDashboard.html';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching user info:', error);
+                        errorMessage.textContent = '获取用户信息失败，请重新登录';
+                    });
+                } else {
+                    errorMessage.textContent = '登录失败，账号、密码或登录身份错误';
+                }
+            })
+            .catch(err => {
+                errorMessage.textContent = '登录失败，请稍后再试！';
+            });
+    });
+</script>
+
+</body>
+</html>

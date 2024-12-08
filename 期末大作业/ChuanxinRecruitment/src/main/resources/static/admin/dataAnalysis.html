@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据分析与报表</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="../js/axios.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .nav-button:hover {
+            background-color: #0056b3;
+        }
+
+        .nav-button.active {
+            background-color: #0056b3;
+        }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart {
+            width: 100%;
+            height: 400px;
+        }
+
+        .overview-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .overview-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .overview-card .number {
+            font-size: 2em;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+
+        .overview-card .label {
+            color: #666;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>数据分析与报表</h1>
+            <div class="nav-buttons">
+                <a href="../admin/userManagement.html" class="nav-button">用户管理</a>
+                <a href="../admin/dataAnalysis.html" class="nav-button active">数据分析</a>
+                <button onclick="logout()" class="nav-button">退出登录</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <select id="timeRange">
+                <option value="7">最近7天</option>
+                <option value="30">最近30天</option>
+                <option value="90">最近90天</option>
+                <option value="365">最近一年</option>
+            </select>
+            <button onclick="refreshData()" class="nav-button">刷新数据</button>
+        </div>
+
+        <div class="overview-cards">
+            <div class="overview-card">
+                <div class="number" id="totalUsers">-</div>
+                <div class="label">总用户数</div>
+            </div>
+            <div class="overview-card">
+                <div class="number" id="totalJobs">-</div>
+                <div class="label">总职位数</div>
+            </div>
+            <div class="overview-card">
+                <div class="number" id="totalApplications">-</div>
+                <div class="label">总投递数</div>
+            </div>
+            <div class="overview-card">
+                <div class="number" id="totalInterviews">-</div>
+                <div class="label">总面试数</div>
+            </div>
+        </div>
+
+        <div class="chart-grid">
+            <div class="chart-container">
+                <h2>用户增长趋势</h2>
+                <div id="userGrowthChart" class="chart"></div>
+            </div>
+            <div class="chart-container">
+                <h2>用户分布</h2>
+                <div id="userDistributionChart" class="chart"></div>
+            </div>
+            <div class="chart-container">
+                <h2>简历投递状态分布</h2>
+                <div id="applicationStatusChart" class="chart"></div>
+            </div>
+            <div class="chart-container">
+                <h2>企业评分分布</h2>
+                <div id="companyRatingChart" class="chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const charts = {};
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+            location.href = '../login.html';
+        }
+
+        // 页面加载完成后初始化图表
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 初始化图表
+            initCharts();
+            // 设置默认时间范围
+            document.getElementById('timeRange').value = '7';
+            // 刷新数据
+            await refreshData();
+        });
+
+        // 初始化所有图表
+        function initCharts() {
+            const chartOptions = {
+                renderer: 'canvas',
+                width: 'auto',
+                height: 'auto'
+            };
+            
+            charts.userGrowth = echarts.init(document.getElementById('userGrowthChart'), null, chartOptions);
+            charts.userDistribution = echarts.init(document.getElementById('userDistributionChart'), null, chartOptions);
+            charts.applicationStatus = echarts.init(document.getElementById('applicationStatusChart'), null, chartOptions);
+            charts.companyRating = echarts.init(document.getElementById('companyRatingChart'), null, chartOptions);
+        }
+
+        // 刷新所有数据
+        async function refreshData() {
+            const days = document.getElementById('timeRange').value;
+            try {
+            await Promise.all([
+                fetchOverviewStats(),
+                fetchUserGrowthData(days),
+                    fetchUserDistributionData(),
+                fetchApplicationStatusData(),
+                fetchCompanyRatingData()
+            ]);
+            } catch (error) {
+                console.error('刷新数据失败:', error);
+            }
+        }
+
+        // 获取概览统计数据
+        async function fetchOverviewStats() {
+            try {
+                const response = await axios.get('/api/stats/overview', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = response.data.result;
+                
+                document.getElementById('totalUsers').textContent = data.totalUsers;
+                document.getElementById('totalJobs').textContent = data.totalJobs;
+                document.getElementById('totalApplications').textContent = data.totalApplications;
+                document.getElementById('totalInterviews').textContent = data.totalInterviews;
+            } catch (error) {
+                console.error('获取概览数据失败:', error);
+            }
+        }
+
+        // 获取用户增长数据并更新图表
+        async function fetchUserGrowthData(days) {
+            try {
+                const response = await axios.get(`/api/stats/user-growth?days=${days}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                const data = response.data.result;
+
+                const option = {
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: data.dates
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: [{
+                        data: data.counts,
+                        type: 'line',
+                        smooth: true
+                    }]
+                };
+                
+                charts.userGrowth.setOption(option);
+            } catch (error) {
+                console.error('获取用户增长数据失败:', error);
+            }
+        }
+
+        // 获取用户分布数据并更新图表
+        async function fetchUserDistributionData() {
+            try {
+                // 使用分页接口获取所有用户数据
+                const response = await axios.get('/api/user/page', {
+                    params: {
+                        currentPage: 1,
+                        pageSize: 1000  // 设置较大的页面大小以获取所有用户
+                    },
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                const users = response.data.result.records || [];
+                console.log('获取到的用户数据:', users); // 调试日志
+                
+                // 统计不同身份的用户数量
+                const stats = {
+                    '管理员': users.filter(u => u.identity === '管理员').length,
+                    '企业HR': users.filter(u => u.identity === '企业HR').length,
+                    '求职者': users.filter(u => u.identity === '求职者').length
+                };
+                
+                console.log('用户身份统计:', stats); // 调试日志
+                
+                // 构建饼图数据
+                const userDistribution = [
+                    { name: '管理员', value: stats['管理员'] },
+                    { name: '企业HR', value: stats['企业HR'] },
+                    { name: '求职者', value: stats['求职者'] }
+                ];
+                
+                // 配置饼图选项
+                const option = {
+                    title: {
+                        text: '用户身份分布',
+                        left: 'center',
+                        top: 0
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c}人 ({d}%)'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left',
+                        top: 'middle'
+                    },
+                    series: [{
+                        name: '用户分布',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        center: ['60%', '50%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 10,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: true,
+                            formatter: '{b}: {c}人'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: '18',
+                                fontWeight: 'bold'
+                            }
+                        },
+                        labelLine: {
+                            show: true
+                        },
+                        data: userDistribution
+                    }]
+                };
+                
+                // 更新图表
+                charts.userDistribution.setOption(option);
+            } catch (error) {
+                console.error('获取用户分布数据失败:', error);
+            }
+        }
+
+        // 获取简历投递状态分布数据并更新图表
+        async function fetchApplicationStatusData() {
+            try {
+                const response = await axios.get('/api/stats/application-status', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = response.data.result;
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left'
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: '50%',
+                        data: data,
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                };
+                
+                charts.applicationStatus.setOption(option);
+            } catch (error) {
+                console.error('获取投递状态数据失败:', error);
+            }
+        }
+
+        // 获取企业评分分布数据并更新图表
+        async function fetchCompanyRatingData() {
+            try {
+                const response = await axios.get('/api/reviews/stats/summary', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = response.data.result;
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: function(params) {
+                            const item = params[0];
+                            const company = data[item.dataIndex];
+                            return `${company.name}<br/>` +
+                                   `平均评分：${company.avgRating}分<br/>` +
+                                   `评价数量：${company.reviewCount}条`;
+                        }
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: data.map(item => item.name),
+                        axisLabel: {
+                            interval: 0,
+                            rotate: 30
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        max: 5,
+                        min: 0,
+                        name: '平均评分'
+                    },
+                    series: [{
+                        name: '企业评分',
+                        data: data.map(item => item.avgRating),
+                        type: 'bar',
+                        label: {
+                            show: true,
+                            position: 'top',
+                            formatter: '{c}分'
+                        },
+                        itemStyle: {
+                            color: function(params) {
+                                // 根据评分设置不同颜色
+                                const score = params.data;
+                                if (score >= 4.5) return '#4caf50';
+                                if (score >= 4.0) return '#8bc34a';
+                                if (score >= 3.5) return '#ffc107';
+                                if (score >= 3.0) return '#ff9800';
+                                return '#f44336';
+                            }
+                        }
+                    }]
+                };
+                
+                charts.companyRating.setOption(option);
+            } catch (error) {
+                console.error('获取企业评分数据失败:', error);
+            }
+        }
+
+        // 监听窗口大小变化，调整图表大小
+        window.addEventListener('resize', function() {
+            Object.values(charts).forEach(chart => chart.resize());
+        });
+
+        // 退出登录
+        function logout() {
+            axios.post('/api/auth/logout', null, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(response => {
+                localStorage.clear();
+                window.location.href = '../login.html';
+            })
+            .catch(error => {
+                console.error('退出失败:', error);
+                // 即使请求失败也清除本地存储并跳转
+                localStorage.clear();
+                window.location.href = '../login.html';
+            });
+        }
+    </script>
+</body>
+</html>

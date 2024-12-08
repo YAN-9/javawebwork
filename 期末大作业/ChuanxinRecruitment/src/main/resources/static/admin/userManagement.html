@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理</title>
+    <script src="../js/axios.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .search-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 300px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button.delete-btn {
+            background-color: #dc3545;
+        }
+
+        button.delete-btn:hover {
+            background-color: #c82333;
+        }
+
+        table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 500px;
+            position: relative;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pagination button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>用户管理系统</h1>
+            <div class="nav-buttons">
+                <button class="nav-button active">用户管理</button>
+                <button class="nav-button" onclick="location.href='dataAnalysis.html'">数据分析</button>
+                <button class="nav-button" onclick="logout()">退出登录</button>
+            </div>
+        </div>
+
+        <!-- 用户统计信息 -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="totalUsers">0</div>
+                <div class="stat-label">总用户数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="jobSeekers">0</div>
+                <div class="stat-label">求职者数量</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="hrUsers">0</div>
+                <div class="stat-label">HR数量</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="adminUsers">0</div>
+                <div class="stat-label">管理员数量</div>
+            </div>
+        </div>
+
+        <!-- 搜索框 -->
+        <div class="search-box">
+            <input type="text" id="searchUsername" placeholder="输入用户名查询" oninput="fetchUsers()">
+            <button onclick="fetchUsers()">搜索</button>
+            <button onclick="resetSearch()">重置</button>
+        </div>
+
+        <!-- 用户列表 -->
+        <table id="usersTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>邮箱</th>
+                    <th>角色</th>
+                    <th>身份</th>
+                    <th>创建时间</th>
+                    <th>更新时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- 分页控件 -->
+        <div class="pagination">
+            <button id="prevPage" onclick="changePage(currentPage - 1)">上一页</button>
+            <span id="pageInfo">第 1 页</span>
+            <button id="nextPage" onclick="changePage(currentPage + 1)">下一页</button>
+        </div>
+    </div>
+
+    <!-- 用户表单模态框 -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="formTitle">添加用户</h2>
+            <form id="userForm" onsubmit="handleSubmit(event)">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password">
+                    <small>编辑时留空表示不修改密码</small>
+                </div>
+                <div class="form-group">
+                    <label for="role">角色</label>
+                    <select id="role" required>
+                        <option value="普通用户">普通用户</option>
+                        <option value="管理员">管理员</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="identity">身份</label>
+                    <select id="identity" required>
+                        <option value="求职者">求职者</option>
+                        <option value="企业HR">企业HR</option>
+                        <option value="管理员">管理员</option>
+                    </select>
+                </div>
+                <button type="submit">提交</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/user'; // 基础API URL
+        let currentPage = 1; // 当前页码
+        let totalPages = 1;  // 总页数
+        const token = localStorage.getItem('token'); // 获取存储的 token
+
+        // 打开模态框（添加/编辑用户）
+        function openModal(userId = null) {
+            const modal = document.getElementById('myModal');
+            modal.style.display = "block";
+            if (userId) {
+                editUser(userId); // 编辑用户
+            } else {
+                resetForm(); // 清空表单，准备添加用户
+            }
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            const modal = document.getElementById('myModal');
+            modal.style.display = "none";
+        }
+
+        // 重置用户表单
+        function resetForm() {
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('formTitle').innerText = '添加用户';
+            document.querySelector('button[type="submit"]').innerText = '提交';
+        }
+
+        // 获取用户列表
+        function fetchUsers() {
+            const username = document.getElementById('searchUsername').value;
+            const url = username ? `${API_URL}/username/${username}` : `${API_URL}/page`;
+            
+            fetch(`${url}?currentPage=${currentPage}&pageSize=10`, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    const users = data.result?.records || [];
+                    totalPages = data.result?.pages || 1;
+                    updateUserTable(users);
+                    updatePagination();
+                    updateStats(users);
+                }
+            })
+            .catch(error => {
+                console.error('获取用户列表失败:', error);
+            });
+        }
+
+        // 更新用户列表
+        function updateUserTable(users) {
+            const tableBody = document.querySelector('#usersTable tbody');
+            tableBody.innerHTML = '';
+            
+            if (users.length > 0) {
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td>${user.identity}</td>
+                        <td>${formatDate(user.createdAt)}</td>
+                        <td>${formatDate(user.updatedAt)}</td>
+                        <td>
+                            <button onclick="openModal(${user.id})">编辑</button>
+                            <button class="delete-btn" onclick="deleteUser(${user.id})">删除</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } else {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="8" style="text-align: center;">没有找到用户</td>';
+                tableBody.appendChild(row);
+            }
+        }
+
+        // 更新分页信息
+        function updatePagination() {
+            document.getElementById('pageInfo').innerText = `第 ${currentPage} 页`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+        }
+
+        // 编辑用户
+        function editUser(userId) {
+            axios.get(`${API_URL}/${userId}`, { headers: { Authorization: `Bearer ${token}` } })
+                .then(response => {
+                    const user = response.data.result;
+                    document.getElementById('userId').value = user.id;
+                    document.getElementById('username').value = user.username;
+                    document.getElementById('email').value = user.email;
+                    document.getElementById('role').value = user.role;
+                    document.getElementById('identity').value = user.identity;
+                    document.getElementById('formTitle').innerText = '编辑用户';
+                    document.querySelector('button[type="submit"]').innerText = '更新';
+                })
+                .catch(error => {
+                    console.error('编辑用户失败:', error);
+                });
+        }
+
+        // 提交用户表单
+        function handleSubmit(event) {
+            event.preventDefault();
+
+            const userId = document.getElementById('userId').value;
+            const user = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value,
+                identity: document.getElementById('identity').value
+            };
+
+            let apiCall;
+            if (userId) {
+                apiCall = axios.put(`${API_URL}/${userId}`, user, { headers: { Authorization: `Bearer ${token}` } });
+            } else {
+                apiCall = axios.post(API_URL, user, { headers: { Authorization: `Bearer ${token}` } });
+            }
+
+            apiCall.then(response => {
+                alert('操作成功');
+                fetchUsers(); // 刷新用户列表
+                closeModal();
+            }).catch(error => {
+                console.error('操作失败:', error);
+            });
+        }
+
+        // 删除用户
+        function deleteUser(id) {
+            if (confirm('确定删除这个用户吗?')) {
+                axios.delete(`${API_URL}/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+                    .then(response => {
+                        alert('用户删除成功');
+                        fetchUsers(); // 刷新用户列表
+                    })
+                    .catch(error => {
+                        console.error('删除用户失败:', error);
+                    });
+            }
+        }
+
+        // 切换页码
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            fetchUsers(); // 刷新用户列表
+        }
+
+        // 初始化页面
+        window.onload = function () {
+            fetchUsers(); // 加载用户列表
+        };
+
+        // 添加统计功能
+        function updateStats(users) {
+            const stats = {
+                total: users.length,
+                jobSeekers: users.filter(u => u.identity === '求职者').length,
+                hr: users.filter(u => u.identity === '企业HR').length,
+                admin: users.filter(u => u.identity === '管理员').length
+            };
+
+            document.getElementById('totalUsers').textContent = stats.total;
+            document.getElementById('jobSeekers').textContent = stats.jobSeekers;
+            document.getElementById('hrUsers').textContent = stats.hr;
+            document.getElementById('adminUsers').textContent = stats.admin;
+        }
+
+        // 重置搜索
+        function resetSearch() {
+            document.getElementById('searchUsername').value = '';
+            currentPage = 1;
+            fetchUsers();
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // 退出登录
+        function logout() {
+            axios.post('/api/auth/logout', null, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(response => {
+                localStorage.clear();
+                window.location.href = '../login.html';
+            })
+            .catch(error => {
+                console.error('退出失败:', error);
+                // 即使请求失败也清除本地存储并跳转
+                localStorage.clear();
+                window.location.href = '../login.html';
+            });
+        }
+    </script>
+</body>
+
+</html>

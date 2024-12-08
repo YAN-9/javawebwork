@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>职位详情</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .job-detail-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .job-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .job-meta {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            color: #666;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .section-content {
+            color: #666;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+
+        .company-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .apply-section {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .nav-button {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .success-message {
+            color: #28a745;
+            margin-top: 10px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>职位详情</h1>
+            <div>
+                <button class="nav-button" onclick="location.href='jobList.html'">返回职位列表</button>
+                <button class="nav-button" onclick="location.href='profile.html'">个人中心</button>
+            </div>
+        </div>
+
+        <div class="job-detail-card">
+            <h2 class="job-title" id="jobTitle"></h2>
+            <div class="job-meta" id="jobMeta"></div>
+            
+            <div class="section">
+                <h3 class="section-title">职位描述</h3>
+                <div class="section-content" id="jobDescription"></div>
+            </div>
+            
+            <div class="section">
+                <h3 class="section-title">职位要求</h3>
+                <div class="section-content" id="jobRequirements"></div>
+            </div>
+        </div>
+
+        <div class="company-info">
+            <h3 class="section-title">发布者信息</h3>
+            <div class="section-content" id="hrInfo"></div>
+        </div>
+
+        <div class="apply-section">
+            <button onclick="showApplyModal()">投递简历</button>
+        </div>
+    </div>
+
+    <!-- 投递确认模态框 -->
+    <div id="applyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeApplyModal()">&times;</span>
+            <h2>确认投递简历</h2>
+            <p style="margin: 20px 0;">确定要投递简历到该职位吗？</p>
+            <button onclick="submitApplication()">确认投递</button>
+            <div id="applyMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentJobId = null;
+        let currentHrId = null;
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLoginStatus();
+            loadJobDetail();
+        });
+
+        // 检查登录状态
+        function checkLoginStatus() {
+            const token = localStorage.getItem('token');
+            const userIdentity = localStorage.getItem('userIdentity');
+            
+            if (!token || userIdentity !== '求职者') {
+                window.location.href = '../login.html';
+                return;
+            }
+        }
+
+        // 从URL获取职位ID
+        function getJobIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+
+        // 加载职位详情
+        async function loadJobDetail() {
+            const jobId = getJobIdFromUrl();
+            if (!jobId) {
+                alert('职位ID无效');
+                window.location.href = 'jobList.html';
+                return;
+            }
+
+            currentJobId = jobId;
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    const job = data.result;
+                    currentHrId = job.hrId;
+                    displayJobDetail(job);
+                    await loadHrInfo(job.hrId);
+                } else {
+                    alert('获取职位信息失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('加载职位信息失败');
+            }
+        }
+
+        // 显示职位详情
+        function displayJobDetail(job) {
+            document.getElementById('jobTitle').textContent = job.title;
+            
+            document.getElementById('jobMeta').innerHTML = `
+                <div class="meta-item">
+                    <span>📍</span>
+                    <span>${job.location}</span>
+                </div>
+                <div class="meta-item">
+                    <span>💰</span>
+                    <span>${job.salaryRange}</span>
+                </div>
+                <div class="meta-item">
+                    <span>🕒</span>
+                    <span>发布时间：${new Date(job.createdAt).toLocaleDateString()}</span>
+                </div>
+            `;
+            
+            document.getElementById('jobDescription').textContent = job.description;
+            document.getElementById('jobRequirements').textContent = job.requirements;
+        }
+
+        // 加载HR信息
+        async function loadHrInfo(hrId) {
+            try {
+                const response = await fetch(`/api/user/${hrId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    const hr = data.result;
+                    document.getElementById('hrInfo').innerHTML = `
+                        <p>发布者：${hr.username}</p>
+                        <p>联系邮箱：${hr.email || '未提供'}</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // 显示投递确认框
+        function showApplyModal() {
+            document.getElementById('applyModal').style.display = 'block';
+        }
+
+        // 关闭投递确认框
+        function closeApplyModal() {
+            document.getElementById('applyModal').style.display = 'none';
+            document.getElementById('applyMessage').textContent = '';
+        }
+
+        // 提交职位申请
+        async function submitApplication() {
+            const token = localStorage.getItem('token');
+            const userId = localStorage.getItem('userId');
+            
+            if (!token || !userId) {
+                alert('请先登录！');
+                window.location.href = '../login.html';
+                return;
+            }
+            
+            try {
+                // 1. 先获取用户的简历信息
+                const resumeResponse = await fetch(`/api/resumes/user/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!resumeResponse.ok) {
+                    throw new Error('获取简历信息失败');
+                }
+                
+                const resumeData = await resumeResponse.json();
+                if (!resumeData.result) {
+                    document.getElementById('applyMessage').className = 'error-message';
+                    document.getElementById('applyMessage').textContent = '请先创建简历！';
+                    setTimeout(() => {
+                        window.location.href = 'profile.html';
+                    }, 2000);
+                    return;
+                }
+
+                // 2. 检查是否已经投递过该职位
+                const applicationsResponse = await fetch(`/api/applications/resume/${resumeData.result.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!applicationsResponse.ok) {
+                    throw new Error('检查投递记录失败');
+                }
+                
+                const applicationsData = await applicationsResponse.json();
+                const hasApplied = applicationsData.result.some(app => app.jobId === parseInt(currentJobId));
+                
+                if (hasApplied) {
+                    document.getElementById('applyMessage').className = 'error-message';
+                    document.getElementById('applyMessage').textContent = '您已经投递过该职位！';
+                    return;
+                }
+                
+                // 3. 创建投递申请
+                const application = {
+                    resumeId: resumeData.result.id,
+                    jobId: currentJobId,
+                    status: '已投递'  // 使用与数据库字段长度匹配的状态值
+                };
+                
+                const response = await fetch('/api/applications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(application)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('投递失败');
+                }
+                
+                const result = await response.json();
+                if (result.code === 200) {
+                    document.getElementById('applyMessage').className = 'success-message';
+                    document.getElementById('applyMessage').textContent = '简历投递成功！';
+                    setTimeout(() => {
+                        window.location.href = 'jobList.html';  // 返回职位列表
+                    }, 2000);
+                } else {
+                    throw new Error(result.message || '投递失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('applyMessage').className = 'error-message';
+                document.getElementById('applyMessage').textContent = '投递失败：' + error.message;
+            }
+        }
+    </script>
+</body>
+</html> 

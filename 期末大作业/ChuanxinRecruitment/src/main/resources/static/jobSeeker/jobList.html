@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>职位列表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .search-filters {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .filter-item {
+            flex: 1;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .job-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .job-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .job-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .job-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .job-company {
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .job-details {
+            display: flex;
+            gap: 15px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .job-description {
+            color: #666;
+            margin: 10px 0;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .job-requirements {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .job-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #999;
+            margin-right: 100px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .recommended-jobs {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .recommended-job-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .recommended-job-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: transform 0.2s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .recommended-job-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .recommended-job-card .job-title {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .recommended-job-card .job-description,
+        .recommended-job-card .job-requirements {
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .recommended-job-card .job-description {
+            font-size: 14px;
+        }
+
+        .recommended-job-card .job-requirements {
+            font-size: 12px;
+        }
+
+        .recommended-job-card .job-meta {
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .section-title {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .search-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .search-input-group {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-input-group i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #007BFF;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+            outline: none;
+        }
+
+        .search-select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: white;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .search-select:focus {
+            border-color: #007BFF;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+            outline: none;
+        }
+
+        .search-button-group {
+            min-width: 120px;
+        }
+
+        .search-button {
+            width: 100%;
+            height: 44px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .search-button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .search-button:active {
+            transform: translateY(0);
+        }
+
+        .text-center {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+        }
+    </style>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.5.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>职位列表</h1>
+            <div>
+                <span id="welcomeText"></span>
+                <button onclick="location.href='companyReview.html'" style="margin-right: 10px;">企业评价</button>
+                <button onclick="location.href='profile.html'" style="margin-right: 10px;">个人中心</button>
+                <button onclick="logout()">退出登录</button>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <div class="search-row">
+                <div class="search-input-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="keyword" class="search-input" placeholder="搜索职位名称或公司">
+                </div>
+                <div class="search-input-group">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input type="text" id="location" class="search-input" placeholder="工作地点">
+                </div>
+                <div class="search-input-group">
+                    <select id="time" class="search-select">
+                        <option value="">发布时间</option>
+                        <option value="24h">24小时内</option>
+                        <option value="3d">3天内</option>
+                        <option value="7d">7天内</option>
+                        <option value="30d">30天内</option>
+                    </select>
+                </div>
+                <div class="search-input-group">
+                    <select id="sort" class="search-select">
+                        <option value="latest">最新发布</option>
+                        <option value="salary">薪资最高</option>
+                    </select>
+                </div>
+                <div class="search-button-group">
+                    <button class="search-button" onclick="searchJobs()">
+                        <i class="fas fa-search"></i>
+                        <span>搜索</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="jobList" class="job-list">
+            <!-- 职位列表将通过 JavaScript 动态加载 -->
+        </div>
+
+        <div class="pagination">
+            <button onclick="changePage('prev')">上一页</button>
+            <span id="currentPage">1</span>
+            <button onclick="changePage('next')">下一页</button>
+        </div>
+
+        <div class="recommended-jobs">
+            <h2 class="section-title">推荐职位</h2>
+            <div id="recommendedJobList" class="job-list">
+                <!-- 推荐职位将通过 JavaScript 动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.5.3/js/bootstrap.min.js"></script>
+    <script>
+        let currentPage = 1;
+        const pageSize = 10;
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查登录状态
+            checkLoginStatus();
+            // 加载职位列表
+            loadJobs();
+            // 加载推荐职位
+            loadRecommendedJobs();
+        });
+
+        // 检查登录状态
+        function checkLoginStatus() {
+            const token = localStorage.getItem('token');
+            const userIdentity = localStorage.getItem('userIdentity');
+            const userId = localStorage.getItem('userId');
+            
+            if (!token || !userId || userIdentity !== '求职者') {
+                window.location.href = '../login.html';
+                return;
+            }
+            
+            const username = localStorage.getItem('username');
+            document.getElementById('welcomeText').textContent = `欢迎，${username || '求职者'}`;
+        }
+
+        // 加载职位列表
+        function loadJobs() {
+            const keyword = document.getElementById('keyword').value;
+            const location = document.getElementById('location').value;
+            const time = document.getElementById('time').value;
+            const sort = document.getElementById('sort').value;
+
+            fetch(`/api/jobs/page?currentPage=${currentPage}&pageSize=${pageSize}&keyword=${keyword}&location=${location}&time=${time}&sort=${sort}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    displayJobs(data.result.records);
+                    updatePagination(data.result.total);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // 加载推荐职位
+        async function loadRecommendedJobs() {
+            try {
+                const userId = localStorage.getItem('userId');
+                if (!userId) {
+                    console.error('未找到用户ID');
+                    document.getElementById('recommendedJobList').innerHTML = 
+                        '<p class="text-center">请先登录后查看推荐职位</p>';
+                    return;
+                }
+
+                const response = await fetch(`/api/jobs/recommended?userId=${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('网络请求失败');
+                }
+
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    if (result.result && result.result.length > 0) {
+                        displayRecommendedJobs(result.result);
+                    } else {
+                        document.getElementById('recommendedJobList').innerHTML = 
+                            '<p class="text-center">暂无推荐职位</p>';
+                    }
+                } else {
+                    throw new Error(result.message || '获取推荐职位失败');
+                }
+            } catch (error) {
+                console.error('Error loading recommended jobs:', error);
+                document.getElementById('recommendedJobList').innerHTML = 
+                    `<p class="text-center">加载推荐职位失败: ${error.message}</p>`;
+            }
+        }
+
+        // 显示职位列表
+        function displayJobs(jobs) {
+            const jobList = document.getElementById('jobList');
+            jobList.innerHTML = '';
+
+            jobs.forEach(job => {
+                const jobCard = createJobCard(job);
+                jobList.appendChild(jobCard);
+            });
+        }
+
+        // 显示推荐职位
+        function displayRecommendedJobs(jobs) {
+            const recommendedJobList = document.getElementById('recommendedJobList');
+            recommendedJobList.innerHTML = '';
+
+            if (!jobs || jobs.length === 0) {
+                recommendedJobList.innerHTML = '<p class="text-center">暂无推荐职位</p>';
+                return;
+            }
+
+            const jobsContainer = document.createElement('div');
+            jobsContainer.className = 'recommended-job-list';
+
+            jobs.forEach(job => {
+                const jobCard = document.createElement('div');
+                jobCard.className = 'recommended-job-card';
+                jobCard.onclick = () => {
+                    window.location.href = `jobDetail.html?id=${job.id}`;
+                };
+
+                const createdDate = new Date(job.createdAt);
+                const formattedDate = `${createdDate.getFullYear()}-${(createdDate.getMonth() + 1).toString().padStart(2, '0')}-${createdDate.getDate().toString().padStart(2, '0')}`;
+
+                jobCard.innerHTML = `
+                    <div class="job-title">${job.title}</div>
+                    <div class="job-details">
+                        <span>${job.location || '地点待定'}</span>
+                        <span class="mx-2">|</span>
+                        <span>${job.salaryRange || '薪资面议'}</span>
+                    </div>
+                    <div class="job-description text-truncate">${job.description || '暂无描述'}</div>
+                    <div class="job-meta">
+                        <small>发布于：${formattedDate}</small>
+                    </div>
+                `;
+
+                jobsContainer.appendChild(jobCard);
+            });
+
+            recommendedJobList.appendChild(jobsContainer);
+        }
+
+        // 创建职位卡片
+        function createJobCard(job) {
+            const div = document.createElement('div');
+            div.className = 'job-card';
+            div.onclick = () => {
+                window.location.href = `jobDetail.html?id=${job.id}`;
+            };
+
+            // 格式化日期
+            const createdDate = new Date(job.createdAt);
+            const formattedDate = `${createdDate.getFullYear()}-${(createdDate.getMonth() + 1).toString().padStart(2, '0')}-${createdDate.getDate().toString().padStart(2, '0')}`;
+
+            div.innerHTML = `
+                <h3 class="job-title">${job.title}</h3>
+                <div class="job-details">
+                    <span>${job.location}</span>
+                    <span>${job.salaryRange}</span>
+                </div>
+                <div class="job-description">${job.description}</div>
+                <div class="job-requirements">
+                    <strong>职位要求：</strong> ${job.requirements}
+                </div>
+                <div class="job-meta">
+                    <span>发布时间：${formattedDate}</span>
+                    <span>更新时间：${new Date(job.updatedAt).toLocaleDateString()}</span>
+                </div>
+            `;
+
+            return div;
+        }
+
+        // 查看职位详情
+        function viewJobDetail(jobId) {
+            window.location.href = `jobDetail.html?id=${jobId}`;
+        }
+
+        // 搜索职位
+        function searchJobs() {
+            currentPage = 1;
+            loadJobs();
+        }
+
+        // 切换页面
+        function changePage(direction) {
+            if (direction === 'prev' && currentPage > 1) {
+                currentPage--;
+            } else if (direction === 'next') {
+                currentPage++;
+            }
+            loadJobs();
+        }
+
+        // 更新分页信息
+        function updatePagination(total) {
+            document.getElementById('currentPage').textContent = currentPage;
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.clear();
+            window.location.href = '../login.html';
+        }
+
+        // 检查登录状态
+        function checkLogin() {
+            return localStorage.getItem('userId') != null;
+        }
+    </script>
+</body>
+</html>

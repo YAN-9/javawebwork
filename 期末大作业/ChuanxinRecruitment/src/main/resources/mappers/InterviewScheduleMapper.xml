@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gzu.chuanxinrecruitment.mapper.InterviewScheduleMapper">
+    <resultMap id="BaseResultMap" type="com.gzu.chuanxinrecruitment.entity.InterviewSchedule">
+        <id column="id" property="id"/>
+        <result column="application_id" property="applicationId"/>
+        <result column="interview_time" property="interviewTime"/>
+        <result column="platform" property="platform"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+</mapper> 
